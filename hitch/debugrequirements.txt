@@ -1,0 +1,8 @@
+ipykernel
+pip
+q
+pudb
+psutil
+sure
+commandlib
+hitchpython
