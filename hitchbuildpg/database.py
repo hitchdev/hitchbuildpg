@@ -47,8 +47,9 @@ class PostgresDatabase(hitchbuild.HitchBuild):
         return PostgresServer(self)
 
     def build(self):
-        server = self.datafiles.postgres("-p", "15432").pexpect()
-        server.expect("database system is ready")
+        server = self.server()
+        server.start()
+
         psql_superuser = self.datafiles.psql(
             "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath,
         )
@@ -62,7 +63,6 @@ class PostgresDatabase(hitchbuild.HitchBuild):
             
         if self._dump_filename is not None:
             self.psql("-f", self._dump_filename).run()
-        
-        os.kill(server.pid, signal.SIGTERM)
-        server.close()
+
+        server.stop()
         
