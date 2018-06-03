@@ -25,12 +25,9 @@ Restored database dump:
   - Run: |
       pgdatabase.ensure_built()
       
-      running_db = pgdatabase.postgres.pexpect()
-      running_db.expect("database system is ready")
+      running_db = pgdatabase.server()
+      running_db.start()
       
       assert "London" in pgdatabase.psql("-c", "select name from cities where location = 'GB';").output()
       
-      import os
-      import signal
-      os.kill(running_db.pid, signal.SIGTERM)
-      running_db.close()
+      running_db.stop()

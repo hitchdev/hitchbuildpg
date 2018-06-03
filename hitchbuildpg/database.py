@@ -8,6 +8,19 @@ import signal
 import os
 
 
+class PostgresServer(object):
+    def __init__(self, db_build):
+        self._db_build = db_build
+
+    def start(self):
+        self._pexpect = self._db_build.datafiles.postgres("-p", "15432").pexpect()
+        self._pexpect.expect("database system is ready")
+
+    def stop(self):
+        os.kill(self._pexpect.pid, signal.SIGTERM)
+        self._pexpect.close()
+
+
 class PostgresDatabase(hitchbuild.HitchBuild):
     def __init__(self, datafiles, owner, name):
         self.datafiles = self.as_dependency(datafiles)
@@ -30,9 +43,8 @@ class PostgresDatabase(hitchbuild.HitchBuild):
             "-p", "15432", "--host", self.datafiles.basepath
         ).with_env(PG_PASSWORD=self.owner.password)
 
-    @property
-    def postgres(self):
-        return self.datafiles.postgres("-p", "15432")
+    def server(self):
+        return PostgresServer(self)
 
     def build(self):
         server = self.datafiles.postgres("-p", "15432").pexpect()
