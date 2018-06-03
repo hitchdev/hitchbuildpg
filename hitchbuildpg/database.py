@@ -50,9 +50,12 @@ class PostgresDatabase(hitchbuild.HitchBuild):
         server = self.server()
         server.start()
 
+        print("Creating user")
         psql_superuser = self.datafiles.psql(
             "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath,
         )
+        
+        print("Creating database")
         psql_superuser(
             "-c",
             "create database {} with owner {};".format(
@@ -62,6 +65,7 @@ class PostgresDatabase(hitchbuild.HitchBuild):
         ).run()
             
         if self._dump_filename is not None:
+            print("Restoring database from dump...")
             self.psql("-f", self._dump_filename).run()
 
         server.stop()
