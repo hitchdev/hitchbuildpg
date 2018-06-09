@@ -7,6 +7,7 @@ kaching
 hitchdoc
 templex
 flake8
+black
 twine
 simex
 q

@@ -27,7 +27,7 @@ class PostgresDatabase(hitchbuild.HitchBuild):
         self.owner = self.as_dependency(owner)
         self._name = name
         self._dump_filename = None
-    
+
     def fingerprint(self):
         return (self._name,)
 
@@ -39,8 +39,14 @@ class PostgresDatabase(hitchbuild.HitchBuild):
     @property
     def psql(self):
         return self.datafiles.psql(
-            "-U", self.owner.name, "-d", self._name,
-            "-p", "15432", "--host", self.datafiles.basepath
+            "-U",
+            self.owner.name,
+            "-d",
+            self._name,
+            "-p",
+            "15432",
+            "--host",
+            self.datafiles.basepath,
         ).with_env(PG_PASSWORD=self.owner.password)
 
     def server(self):
@@ -52,21 +58,16 @@ class PostgresDatabase(hitchbuild.HitchBuild):
 
         print("Creating user")
         psql_superuser = self.datafiles.psql(
-            "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath,
+            "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath
         )
-        
+
         print("Creating database")
         psql_superuser(
-            "-c",
-            "create database {} with owner {};".format(
-                self.name,
-                self.owner.name,
-            )
+            "-c", "create database {} with owner {};".format(self.name, self.owner.name)
         ).run()
-            
+
         if self._dump_filename is not None:
             print("Restoring database from dump...")
             self.psql("-f", self._dump_filename).run()
 
         server.stop()
-        

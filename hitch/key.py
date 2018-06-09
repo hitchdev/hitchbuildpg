@@ -3,7 +3,7 @@ from hitchstory import expected_exception, validate, HitchStoryException
 from hitchrun import expected
 from strictyaml import Str, MapPattern, Optional, Float
 from pathquery import pathquery
-from commandlib import run, Command
+from commandlib import run, Command, python_bin
 from commandlib import python
 from hitchrun import hitch_maintenance
 from hitchrun import DIR
@@ -13,19 +13,21 @@ import hitchbuildpy
 
 
 def project_build(paths, python_version):
-    pylibrary = hitchbuildpy.PyLibrary(
-        name="py{0}".format(python_version),
-        base_python=hitchbuildpy.PyenvBuild(python_version)
-                                .with_build_path(paths.share),
-        module_name="hitchbuildpg",
-        library_src=paths.project,
-    ).with_requirementstxt(
-        paths.key/"debugrequirements.txt"
-    ).with_build_path(paths.gen)
+    pylibrary = (
+        hitchbuildpy.PyLibrary(
+            name="py{0}".format(python_version),
+            base_python=hitchbuildpy.PyenvBuild(python_version).with_build_path(
+                paths.share
+            ),
+            module_name="hitchbuildpg",
+            library_src=paths.project,
+        )
+        .with_requirementstxt(paths.key / "debugrequirements.txt")
+        .with_build_path(paths.gen)
+    )
 
     pylibrary.ensure_built()
     return pylibrary
-
 
 
 class Engine(BaseEngine):
@@ -39,9 +41,7 @@ class Engine(BaseEngine):
             Optional("postgres_version"): Str(),
             Optional("python version"): Str(),
         },
-        info={
-            Optional("about"): Str(),
-        }
+        info={Optional("about"): Str()},
     )
 
     def __init__(self, paths, settings):
@@ -62,17 +62,13 @@ class Engine(BaseEngine):
         if self.path.build_path.exists():
             self.path.build_path.rmtree(ignore_errors=True)
         self.path.build_path.mkdir()
-        
-        self.python = project_build(
-            self.path,
-            self.given['python version'],
-        ).bin.python
 
+        self.python = project_build(self.path, self.given["python version"]).bin.python
 
         if not self.path.cachestate.exists():
             self.path.cachestate.mkdir()
 
-        for filename, contents in self.given.get('files', {}).items():
+        for filename, contents in self.given.get("files", {}).items():
             filepath = self.path.state.joinpath(filename)
             if not filepath.dirname().exists():
                 filepath.dirname().makedirs()
@@ -82,30 +78,32 @@ class Engine(BaseEngine):
             self.path.working_dir.rmtree(ignore_errors=True)
         self.path.working_dir.mkdir()
 
-        
-
-        self.example_py_code = ExamplePythonCode(self.python, self.path.state)\
-            .with_setup_code(self.given.get('setup', ''))\
-            .with_terminal_size(160, 100)\
+        self.example_py_code = (
+            ExamplePythonCode(self.python, self.path.state)
+            .with_setup_code(self.given.get("setup", ""))
+            .with_terminal_size(160, 100)
             .with_long_strings(
                 postgres_version=self.given.get("postgres_version"),
                 share=str(self.path.cachestate),
                 build_path=str(self.path.build_path),
             )
+        )
 
     def run(self, code):
         self.example_py_code.with_code(code).run()
 
     @expected_exception(NonMatching)
     def output_ends_with(self, contents):
-        Templex(contents).assert_match(self.result.output.split('\n')[-1])
+        Templex(contents).assert_match(self.result.output.split("\n")[-1])
 
     def write_file(self, filename, contents):
         self.path.state.joinpath(filename).write_text(contents)
 
     def raises_exception(self, message=None, exception_type=None):
         try:
-            result = self.example_python_code.expect_exceptions().run(self.path.state, self.python)
+            result = self.example_python_code.expect_exceptions().run(
+                self.path.state, self.python
+            )
             result.exception_was_raised(exception_type, message.strip())
         except ExpectedExceptionMessageWasDifferent as error:
             if self.settings.get("rewrite"):
@@ -114,15 +112,19 @@ class Engine(BaseEngine):
                 raise
 
     def file_contains(self, filename, contents):
-        assert self.path.working_dir.joinpath(filename).bytes().decode('utf8') == contents
+        assert (
+            self.path.working_dir.joinpath(filename).bytes().decode("utf8") == contents
+        )
 
     @validate(duration=Float())
     def sleep(self, duration):
         import time
+
         time.sleep(duration)
 
     def pause(self, message="Pause"):
         import IPython
+
         IPython.embed()
 
 
@@ -151,9 +153,11 @@ def regression():
     Regression test - run all tests and linter.
     """
     lint()
-    results = StoryCollection(
-        pathquery(DIR.key).ext("story"), Engine(DIR, {})
-    ).ordered_by_name().play()
+    results = (
+        StoryCollection(pathquery(DIR.key).ext("story"), Engine(DIR, {}))
+        .ordered_by_name()
+        .play()
+    )
     print(results.report())
 
 
@@ -162,9 +166,10 @@ def rewriteall():
     Run regression tests with story rewriting on.
     """
     print(
-        StoryCollection(
-            pathquery(DIR.key).ext("story"), Engine(DIR, {"rewrite": True})
-        ).ordered_by_name().play().report()
+        StoryCollection(pathquery(DIR.key).ext("story"), Engine(DIR, {"rewrite": True}))
+        .ordered_by_name()
+        .play()
+        .report()
     )
 
 
@@ -178,9 +183,7 @@ def lint():
         "--exclude=__init__.py",
     ).run()
     python("-m", "flake8")(
-        DIR.key.joinpath("key.py"),
-        "--max-line-length=100",
-        "--exclude=__init__.py",
+        DIR.key.joinpath("key.py"), "--max-line-length=100", "--exclude=__init__.py"
     ).run()
     print("Lint success!")
 
@@ -209,6 +212,14 @@ def rerun(version="3.5.0"):
     ).in_dir(DIR.gen.joinpath("state")).run()
 
 
+def black():
+    """
+    Reformat the code.
+    """
+    python_bin.black(DIR.project / "hitchbuildpg").run()
+    python_bin.black(DIR.key / "key.py").run()
+
+
 def deploy(version):
     """
     Deploy to pypi as specified version.
@@ -216,14 +227,13 @@ def deploy(version):
     NAME = "hitchbuildpg"
     git = Command("git").in_dir(DIR.project)
     version_file = DIR.project.joinpath("VERSION")
-    old_version = version_file.bytes().decode('utf8')
+    old_version = version_file.bytes().decode("utf8")
     if version_file.bytes().decode("utf8") != version:
         DIR.project.joinpath("VERSION").write_text(version)
         git("add", "VERSION").run()
-        git("commit", "-m", "RELEASE: Version {0} -> {1}".format(
-            old_version,
-            version
-        )).run()
+        git(
+            "commit", "-m", "RELEASE: Version {0} -> {1}".format(old_version, version)
+        ).run()
         git("push").run()
         git("tag", "-a", version, "-m", "Version {0}".format(version)).run()
         git("push", "origin", version).run()
@@ -232,14 +242,12 @@ def deploy(version):
 
     # Set __version__ variable in __init__.py, build sdist and put it back
     initpy = DIR.project.joinpath(NAME, "__init__.py")
-    original_initpy_contents = initpy.bytes().decode('utf8')
-    initpy.write_text(
-        original_initpy_contents.replace("DEVELOPMENT_VERSION", version)
-    )
+    original_initpy_contents = initpy.bytes().decode("utf8")
+    initpy.write_text(original_initpy_contents.replace("DEVELOPMENT_VERSION", version))
     python("setup.py", "sdist").in_dir(DIR.project).run()
     initpy.write_text(original_initpy_contents)
 
     # Upload to pypi
-    python(
-        "-m", "twine", "upload", "dist/{0}-{1}.tar.gz".format(NAME, version)
-    ).in_dir(DIR.project).run()
+    python("-m", "twine", "upload", "dist/{0}-{1}.tar.gz".format(NAME, version)).in_dir(
+        DIR.project
+    ).run()

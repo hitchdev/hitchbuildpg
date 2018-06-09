@@ -3,8 +3,9 @@ from distutils.version import LooseVersion
 from hitchbuildpg import utils
 from path import Path
 import hitchbuild
-import os
+import pexpect
 import signal
+import os
 
 
 class PostgresServer(object):
@@ -14,13 +15,14 @@ class PostgresServer(object):
     def start(self):
         self._pexpect = self._datafiles.postgres("-p", "15432").pexpect()
         self._pexpect.expect("database system is ready")
-    
+
     @property
     def psql(self):
         return self._datafiles.psql("-p", "15432")
 
     def stop(self):
         os.kill(self._pexpect.pid, signal.SIGTERM)
+        self._pexpect.expect(pexpect.EOF)
         self._pexpect.close()
 
 
@@ -35,30 +37,17 @@ class DataBuild(object):
         self.run()
         self._server.stop()
 
-    def create_user(self, username, password):
-        self._server.psql(
-            "-d", "template1",
-            "-c", "create user {} with password '{}';".format(
-                username,
-                password
-            )
-        ).run()
+    def run_sql_as_root(self, sql):
+        return self._server.psql("-d", "template1", "-c", sql).run()
 
-    def create_db(self, name, owner):
-        self._server.psql(
-            "-d", "template1",
-            "-c", "create database {} with owner {};".format(
-                name,
-                owner,
-            )
-        ).run()
+    @property
+    def psql(self):
+        return self._server.psql
 
-    def restore_from_dump(self, database, username, password, filename):
+    def load_database_dump(self, database, username, password, filename):
         self._server.psql(
-            "-U", username, "-p", "15432", "-d", database,
-            "-f", filename
-      ).with_env(PG_PASSWORD=password).run()
-
+            "-U", username, "-p", "15432", "-d", database, "-f", str(filename)
+        ).with_env(PG_PASSWORD=password).run()
 
 
 class PostgresDatafiles(hitchbuild.HitchBuild):
@@ -72,29 +61,50 @@ class PostgresDatafiles(hitchbuild.HitchBuild):
 
     @property
     def basepath(self):
-        return self.build_path.joinpath(self.name)
-    
+        return self.build_path.joinpath(self.name).abspath()
+
+    @property
+    def workingpath(self):
+        return self.basepath / "working"
+
+    @property
+    def snapshotpath(self):
+        return self.basepath / "snapshot"
+
     @property
     def postgres(self):
         return self.postgresapp.bin.postgres.with_trailing_args(
-            "-D", self.basepath,
-            "--unix_socket_directories={0}".format(self.basepath),
+            "-D",
+            self.workingpath,
+            "--unix_socket_directories={0}".format(self.workingpath),
             "--log_destination=stderr",
         )
-    
+
     @property
     def psql(self):
-        return self.postgresapp.bin.psql("--host", self.basepath)
+        return self.postgresapp.bin.psql("--host", self.workingpath)
 
     def server(self):
         return PostgresServer(self)
 
     def build(self):
-        self.clean()
         if not self.basepath.exists():
             self.basepath.mkdir()
-            self.postgresapp.bin.initdb(self.basepath).run()
+            self.workingpath.mkdir()
+            self.snapshotpath.mkdir()
+            self.postgresapp.bin.initdb(self.workingpath).run()
             self._databuild.from_datafiles(self).build()
+            Command("rsync")(
+                "--del",
+                "-av",
+                # Trailing slash so contents are moved not whole dir
+                self.workingpath + "/",
+                self.snapshotpath,
+            ).run()
+        else:
+            Command("rsync")(
+                "--del", "-av", self.snapshotpath + "/", self.workingpath
+            ).run()
 
     def clean(self):
         if self.basepath.exists():

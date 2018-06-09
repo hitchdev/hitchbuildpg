@@ -20,16 +20,11 @@ class PostgresUser(hitchbuild.HitchBuild):
         server = self.datafiles.postgres("-p", "15432").pexpect()
         server.expect("database system is ready")
         psql = self.datafiles.psql(
-            "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath,
+            "-d", "template1", "-p", "15432", "--host", self.datafiles.basepath
         )
         psql(
-            "-c",
-            "create user {} with password '{}';".format(
-                self.name,
-                self.password,
-            )
+            "-c", "create user {} with password '{}';".format(self.name, self.password)
         ).run()
-        
+
         os.kill(server.pid, signal.SIGTERM)
         server.close()
-        

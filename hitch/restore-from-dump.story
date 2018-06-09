@@ -1,5 +1,9 @@
-Restored database dump:
+Working on restorable database dump:
   based on: base postgres
+  about: |
+    Using hitchbuildpg you can build database files from a normal
+    SQL dump, work on it, change it and then wipe and rebuild again
+    from a snapshot taken after the first build.
   given:
     postgres_version: 10.3
     files:
@@ -18,10 +22,13 @@ Restored database dump:
       
       class DataBuild(hitchbuildpg.DataBuild):
           def run(self):
-              self.create_user("myuser", "mypassword")
-              self.create_db("mydb", "myuser")
-              self.restore_from_dump(
-                  "mydb", "myuser", "mypassword", "dump.sql"
+              self.run_sql_as_root("create user myuser with password 'mypassword';")
+              self.run_sql_as_root("create database mydb with owner myuser;")
+              self.load_database_dump(
+                  database="mydb",
+                  username="myuser",
+                  password="mypassword",
+                  filename="dump.sql"
               )
 
       pgdata = hitchbuildpg.PostgresDatafiles(
@@ -46,9 +53,12 @@ Restored database dump:
       
       psql("-c", "delete from cities where location = 'GB';").run()
       
+      import time
+      time.sleep(0.2)
+      
       db_service.stop()
   - Run: |
-      # This will snap the datafiles back to 
+      # This will restore the data to its original state
       pgdata.ensure_built()
       
       db_service = pgdata.server()
@@ -57,6 +67,8 @@ Restored database dump:
       psql = db_service.psql(
           "-U", "myuser", "-p", "15432", "-d", "mydb",
       ).with_env(PG_PASSWORD="mypassword")
+      
+      print(psql("-c", "select name from cities where location = 'GB';").output())
       
       assert "London" in psql("-c", "select name from cities where location = 'GB';").output()
       
