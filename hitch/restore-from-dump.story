@@ -15,19 +15,49 @@ Restored database dump:
       import hitchbuildpg
 
       pgapp = hitchbuildpg.PostgresApp(postgres_version).with_build_path(share)
+      
+      class DataBuild(hitchbuildpg.DataBuild):
+          def run(self):
+              self.create_user("myuser", "mypassword")
+              self.create_db("mydb", "myuser")
+              self.restore_from_dump(
+                  "mydb", "myuser", "mypassword", "dump.sql"
+              )
 
-      pgdata = hitchbuildpg.PostgresDatafiles("myappdata", pgapp)
-      pguser = hitchbuildpg.PostgresUser(pgdata, "myuser", "mypassword")
-      pgdatabase = hitchbuildpg.PostgresDatabase(
-          pgdata, pguser, "mydb"
-      ).from_dump("dump.sql").with_build_path(".")
+      pgdata = hitchbuildpg.PostgresDatafiles(
+          "myappdata",
+          pgapp,
+          DataBuild(),
+      ).with_build_path(".")
   steps:
   - Run: |
-      pgdatabase.ensure_built()
+      pgdata.ensure_built()
       
-      running_db = pgdatabase.server()
-      running_db.start()
+      db_service = pgdata.server()
+      db_service.start()
       
-      assert "London" in pgdatabase.psql("-c", "select name from cities where location = 'GB';").output()
+      psql = db_service.psql(
+          "-U", "myuser", "-p", "15432", "-d", "mydb",
+      ).with_env(PG_PASSWORD="mypassword")
       
-      running_db.stop()
+      assert "London" in psql(
+          "-c", "select name from cities where location = 'GB';"
+      ).output()
+      
+      psql("-c", "delete from cities where location = 'GB';").run()
+      
+      db_service.stop()
+  - Run: |
+      # This will snap the datafiles back to 
+      pgdata.ensure_built()
+      
+      db_service = pgdata.server()
+      db_service.start()
+      
+      psql = db_service.psql(
+          "-U", "myuser", "-p", "15432", "-d", "mydb",
+      ).with_env(PG_PASSWORD="mypassword")
+      
+      assert "London" in psql("-c", "select name from cities where location = 'GB';").output()
+      
+      db_service.stop()
