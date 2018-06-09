@@ -19,3 +19,8 @@ class PostgresServer(object):
         os.kill(self._pexpect.pid, signal.SIGTERM)
         self._pexpect.expect(pexpect.EOF)
         self._pexpect.close()
+
+    def kill(self):
+        os.kill(self._pexpect.pid, signal.SIGQUIT)
+        self._pexpect.expect(pexpect.EOF)
+        self._pexpect.close()
