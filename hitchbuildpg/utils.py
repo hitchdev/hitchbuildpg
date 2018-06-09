@@ -1,4 +1,4 @@
-from commandlib import Command
+from commandlib import Command, CommandError
 import patoolib
 import shutil
 import os
@@ -18,8 +18,6 @@ class DownloadError(Exception):
 
 def download_file(downloaded_file_name, url, max_connections=2, max_concurrent=5):
     """Download file to specified location."""
-    from commandlib import Command, CommandError, run
-
     if os.path.exists(downloaded_file_name):
         return
 
@@ -30,9 +28,9 @@ def download_file(downloaded_file_name, url, max_connections=2, max_concurrent=5
 
     try:
         if os.path.isabs(downloaded_file_name):
-            run(aria2c("--dir=/", "--out={}.part".format(downloaded_file_name), url))
+            aria2c("--dir=/", "--out={}.part".format(downloaded_file_name), url).run()
         else:
-            run(aria2c("--dir=.", "--out={}.part".format(downloaded_file_name), url))
+            aria2c("--dir=.", "--out={}.part".format(downloaded_file_name), url).run()
     except CommandError:
         raise DownloadError(
             "Failed to download {}. Re-running may fix the problem.".format(url)

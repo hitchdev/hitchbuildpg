@@ -1,7 +1,5 @@
 from commandlib import CommandPath, Command
-from distutils.version import LooseVersion
 from hitchbuildpg import utils
-from path import Path
 import hitchbuild
 
 

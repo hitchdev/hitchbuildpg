@@ -3,7 +3,7 @@ from hitchstory import expected_exception, validate, HitchStoryException
 from hitchrun import expected
 from strictyaml import Str, MapPattern, Optional, Float
 from pathquery import pathquery
-from commandlib import run, Command, python_bin
+from commandlib import Command, python_bin
 from commandlib import python
 from hitchrun import hitch_maintenance
 from hitchrun import DIR

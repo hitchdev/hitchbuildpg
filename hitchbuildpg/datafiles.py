@@ -1,53 +1,6 @@
-from commandlib import CommandPath, Command
-from distutils.version import LooseVersion
-from hitchbuildpg import utils
-from path import Path
+from hitchbuildpg.server import PostgresServer
+from commandlib import Command
 import hitchbuild
-import pexpect
-import signal
-import os
-
-
-class PostgresServer(object):
-    def __init__(self, datafiles):
-        self._datafiles = datafiles
-
-    def start(self):
-        self._pexpect = self._datafiles.postgres("-p", "15432").pexpect()
-        self._pexpect.expect("database system is ready")
-
-    @property
-    def psql(self):
-        return self._datafiles.psql("-p", "15432")
-
-    def stop(self):
-        os.kill(self._pexpect.pid, signal.SIGTERM)
-        self._pexpect.expect(pexpect.EOF)
-        self._pexpect.close()
-
-
-class DataBuild(object):
-    def from_datafiles(self, datafiles):
-        self._datafiles = datafiles
-        return self
-
-    def build(self):
-        self._server = self._datafiles.server()
-        self._server.start()
-        self.run()
-        self._server.stop()
-
-    def run_sql_as_root(self, sql):
-        return self._server.psql("-d", "template1", "-c", sql).run()
-
-    @property
-    def psql(self):
-        return self._server.psql
-
-    def load_database_dump(self, database, username, password, filename):
-        self._server.psql(
-            "-U", username, "-p", "15432", "-d", database, "-f", str(filename)
-        ).with_env(PG_PASSWORD=password).run()
 
 
 class PostgresDatafiles(hitchbuild.HitchBuild):
