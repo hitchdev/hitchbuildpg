@@ -41,7 +41,8 @@ class PostgresDatafiles(hitchbuild.HitchBuild):
         return PostgresServer(self)
 
     def build(self):
-        if not self.basepath.exists():
+        if not self.basepath.exists() or self.last_run_had_exception:
+            self.basepath.rmtree(ignore_errors=True)
             self.basepath.mkdir()
             self.workingpath.mkdir()
             self.snapshotpath.mkdir()

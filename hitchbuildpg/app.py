@@ -26,7 +26,8 @@ class PostgresApp(hitchbuild.HitchBuild):
         return self.basepath.joinpath("postgresql-{}".format(self.version))
 
     def build(self):
-        if not self.basepath.exists():
+        if not self.basepath.exists() or self.last_run_had_exception:
+            self.basepath.rmtree(ignore_errors=True)
             self.basepath.mkdir()
 
             download_to = self.basepath.joinpath(
