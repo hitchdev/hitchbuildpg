@@ -41,11 +41,16 @@ class PostgresApp(hitchbuild.HitchBuild):
             )
             utils.extract_archive(download_to, self.basepath)
 
+            print("Running ./configure --prefix={}".format(self.full_directory))
             Command("./configure")("--prefix={}".format(self.full_directory)).in_dir(
                 self.full_directory
             ).run()
-            Command("make").in_dir(self.full_directory).run()
+            print("Running make world")
+            Command("make", "world").in_dir(self.full_directory).run()
+            print("Running make install")
             Command("make")("install").in_dir(self.full_directory).run()
+            print("Running make install for contrib")
+            Command("make")("install").in_dir(self.full_directory / "contrib").run()
         self.verify()
 
     def verify(self):
