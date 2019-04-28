@@ -41,7 +41,7 @@ class PostgresApp(hitchbuild.HitchBuild):
             )
             utils.extract_archive(download_to, self.basepath)
 
-            print("Running ./configure --prefix={}".format(self.full_directory))
+            print("Running ./configure --with-openssl --prefix={}".format(self.full_directory))
             Command("./configure")("--prefix={}".format(self.full_directory)).in_dir(
                 self.full_directory
             ).run()
