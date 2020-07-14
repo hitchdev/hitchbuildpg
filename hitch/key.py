@@ -1,7 +1,16 @@
-from hitchstory import StoryCollection, BaseEngine, exceptions, validate, no_stacktrace_for
-from hitchstory import GivenDefinition, GivenProperty, InfoDefinition, InfoProperty, HitchStoryException
+from hitchstory import (
+    StoryCollection,
+    BaseEngine,
+    validate,
+    no_stacktrace_for,
+)
+from hitchstory import (
+    GivenDefinition,
+    GivenProperty,
+    HitchStoryException,
+)
 from hitchrun import expected
-from strictyaml import Str, MapPattern, Optional, Float
+from strictyaml import Str, MapPattern, Float
 from pathquery import pathquery
 from commandlib import Command, python_bin, python
 from hitchrun import DIR
@@ -36,7 +45,7 @@ class Engine(BaseEngine):
         code=GivenProperty(Str()),
         files=GivenProperty(MapPattern(Str(), Str())),
         postgres_version=GivenProperty(Str()),
-        python_version=GivenProperty(Str()),      
+        python_version=GivenProperty(Str()),
     )
 
     def __init__(self, paths, settings):
@@ -189,13 +198,6 @@ def cleancache():
     """
     DIR.gen.joinpath("cachestate").rmtree(ignore_errors=True)
     print("Done")
-
-
-def hitch(*args):
-    """
-    Use 'h hitch --help' to get help on these commands.
-    """
-    hitch_maintenance(*args)
 
 
 def rerun(version="3.5.0"):

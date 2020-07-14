@@ -32,12 +32,16 @@ class PostgresApp(hitchbuild.HitchBuild):
             )
             utils.extract_archive(download_to, self.buildpath)
             download_to.remove()
-            
-            for filepath in self.buildpath.joinpath("postgresql-{}".format(self.version)).listdir():
+
+            for filepath in self.buildpath.joinpath(
+                "postgresql-{}".format(self.version)
+            ).listdir():
                 shutil.move(filepath, self.buildpath)
             self.buildpath.joinpath("postgresql-{}".format(self.version)).rmdir()
 
-            print("Running ./configure --with-openssl --prefix={}".format(self.buildpath))
+            print(
+                "Running ./configure --with-openssl --prefix={}".format(self.buildpath)
+            )
             Command("./configure")("--prefix={}".format(self.buildpath)).in_dir(
                 self.buildpath
             ).run()

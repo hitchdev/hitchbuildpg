@@ -50,13 +50,13 @@ class PostgresDatafiles(hitchbuild.HitchBuild):
             self._rsync(self.snapshotpath, self.workingpath)
 
     def _rsync(self, from_path, to_path):
-      Command("rsync")(
-          "--del",
-          "-av",
-          # Trailing slash so contents are moved not whole dir
-          from_path + "/",
-          to_path,
-      ).run()
+        Command("rsync")(
+            "--del",
+            "-av",
+            # Trailing slash so contents are moved not whole dir
+            from_path + "/",
+            to_path,
+        ).run()
 
     def clean(self):
         if self.buildpath.exists():
