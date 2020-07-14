@@ -17,7 +17,8 @@ def read(*parts):
 setup(name="hitchbuildpg",
       version=read('VERSION').replace('\n', ''),
       description="Tool to build postgres databases for development and testing.",
-      long_description=read('README.rst'),
+      long_description=read('README.md'),
+      long_description_content_type="text/markdown",
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',
