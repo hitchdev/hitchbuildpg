@@ -1,13 +1,13 @@
 Built App:
   based on: base postgres
-  description: |
+  about: |
     Build postgres.
   given:
     postgres_version: 10.3
     setup: |
       import hitchbuildpg
 
-      pgapp = hitchbuildpg.PostgresApp(postgres_version).with_build_path(".")
+      pgapp = hitchbuildpg.PostgresApp("./postgres", postgres_version)
   steps:
   - Run: |
       pgapp.ensure_built()

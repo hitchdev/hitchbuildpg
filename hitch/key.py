@@ -1,14 +1,12 @@
-from hitchstory import StoryCollection, StorySchema, BaseEngine
-from hitchstory import expected_exception, validate, HitchStoryException
+from hitchstory import StoryCollection, BaseEngine, exceptions, validate, no_stacktrace_for
+from hitchstory import GivenDefinition, GivenProperty, InfoDefinition, InfoProperty, HitchStoryException
 from hitchrun import expected
 from strictyaml import Str, MapPattern, Optional, Float
 from pathquery import pathquery
-from commandlib import Command, python_bin
-from commandlib import python
-from hitchrun import hitch_maintenance
+from commandlib import Command, python_bin, python
 from hitchrun import DIR
 from hitchrunpy import ExamplePythonCode, ExpectedExceptionMessageWasDifferent
-from templex import Templex, NonMatching
+from templex import Templex
 import hitchbuildpy
 
 
@@ -33,15 +31,12 @@ def project_build(paths, python_version):
 class Engine(BaseEngine):
     """Python engine for running tests."""
 
-    schema = StorySchema(
-        given={
-            Optional("setup"): Str(),
-            Optional("code"): Str(),
-            Optional("files"): MapPattern(Str(), Str()),
-            Optional("postgres_version"): Str(),
-            Optional("python version"): Str(),
-        },
-        info={Optional("about"): Str()},
+    given_definition = GivenDefinition(
+        setup=GivenProperty(Str()),
+        code=GivenProperty(Str()),
+        files=GivenProperty(MapPattern(Str(), Str())),
+        postgres_version=GivenProperty(Str()),
+        python_version=GivenProperty(Str()),      
     )
 
     def __init__(self, paths, settings):
@@ -82,7 +77,7 @@ class Engine(BaseEngine):
             ExamplePythonCode(self.python, self.path.state)
             .with_setup_code(self.given.get("setup", ""))
             .with_terminal_size(160, 100)
-            .with_long_strings(
+            .with_strings(
                 postgres_version=self.given.get("postgres_version"),
                 share=str(self.path.cachestate),
                 build_path=str(self.path.build_path),
@@ -92,7 +87,7 @@ class Engine(BaseEngine):
     def run(self, code):
         self.example_py_code.with_code(code).run()
 
-    @expected_exception(NonMatching)
+    @no_stacktrace_for(AssertionError)
     def output_ends_with(self, contents):
         Templex(contents).assert_match(self.result.output.split("\n")[-1])
 

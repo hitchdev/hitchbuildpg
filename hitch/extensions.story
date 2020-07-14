@@ -12,7 +12,7 @@ Extensions:
     setup: |
       import hitchbuildpg
 
-      pgapp = hitchbuildpg.PostgresApp(postgres_version).with_build_path(share)
+      pgapp = hitchbuildpg.PostgresApp(share, postgres_version)
 
       class DataBuild(hitchbuildpg.DataBuild):
           def run(self):
@@ -21,10 +21,10 @@ Extensions:
               self.run_sql_as_root("create database mydb with owner myuser;")
 
       pgdata = hitchbuildpg.PostgresDatafiles(
-          "myappdata",
+          "./myappdata",
           pgapp,
           DataBuild(),
-      ).with_build_path(".")
+      )
   steps:
   - Run: |
       pgdata.ensure_built()

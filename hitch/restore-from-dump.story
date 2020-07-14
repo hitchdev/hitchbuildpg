@@ -17,9 +17,11 @@ Working on restorable database dump:
         INSERT INTO cities values ('Paris', 'France');
     setup: |
       import hitchbuildpg
+    
+      pgapp_dir = "{}/postgres-{}".format(share, postgres_version)
 
-      pgapp = hitchbuildpg.PostgresApp(postgres_version).with_build_path(share)
-      
+      pgapp = hitchbuildpg.PostgresApp(pgapp_dir, postgres_version)
+
       class DataBuild(hitchbuildpg.DataBuild):
           def run(self):
               self.run_sql_as_root("create user myuser with password 'mypassword';")
@@ -28,14 +30,14 @@ Working on restorable database dump:
                   database="mydb",
                   username="myuser",
                   password="mypassword",
-                  filename="dump.sql"
+                  filename="../dump.sql"
               )
 
       pgdata = hitchbuildpg.PostgresDatafiles(
-          "myappdata",
+          "./myappdata",
           pgapp,
           DataBuild(),
-      ).with_build_path(".")
+      )
   steps:
   - Run: |
       pgdata.ensure_built()

@@ -1,32 +1,27 @@
 from hitchbuildpg.server import PostgresServer
 from commandlib import Command
+from path import Path
 import hitchbuild
 
 
 class PostgresDatafiles(hitchbuild.HitchBuild):
-    def __init__(self, name, postgresapp, databuild):
-        self._name = name
+    def __init__(self, build_path, postgresapp, databuild):
+        self.buildpath = Path(build_path).abspath()
         self._databuild = databuild
-        self.postgresapp = self.as_dependency(postgresapp)
-
-    def fingerprint(self):
-        return (self._name,)
-
-    @property
-    def basepath(self):
-        return self.build_path.joinpath(self.name).abspath()
+        self.fingerprint_path = self.buildpath / "fingerprint.txt"
+        self.postgresapp = self.dependency(postgresapp)
 
     @property
     def workingpath(self):
-        return self.basepath / "working"
+        return self.buildpath / "working"
 
     @property
     def snapshotpath(self):
-        return self.basepath / "snapshot"
+        return self.buildpath / "snapshot"
 
     @property
     def postgres(self):
-        return self.postgresapp.bin.postgres.with_trailing_args(
+        return self.postgresapp.build.bin.postgres.with_trailing_args(
             "-D",
             self.workingpath,
             "--unix_socket_directories={0}".format(self.workingpath),
@@ -35,31 +30,34 @@ class PostgresDatafiles(hitchbuild.HitchBuild):
 
     @property
     def psql(self):
-        return self.postgresapp.bin.psql("--host", self.workingpath)
+        return self.postgresapp.build.bin.psql("--host", self.workingpath)
 
     def server(self):
         return PostgresServer(self)
 
     def build(self):
-        if not self.basepath.exists() or self.last_run_had_exception:
-            self.basepath.rmtree(ignore_errors=True)
-            self.basepath.mkdir()
+        if self.incomplete() or self.postgresapp.rebuilt:
+            self.postgresapp.build.ensure_built()
+            self.buildpath.rmtree(ignore_errors=True)
+            self.buildpath.mkdir()
             self.workingpath.mkdir()
             self.snapshotpath.mkdir()
-            self.postgresapp.bin.initdb(self.workingpath).run()
+            self.postgresapp.build.bin.initdb(self.workingpath).run()
             self._databuild.from_datafiles(self).build()
-            Command("rsync")(
-                "--del",
-                "-av",
-                # Trailing slash so contents are moved not whole dir
-                self.workingpath + "/",
-                self.snapshotpath,
-            ).run()
+            self._rsync(self.workingpath, self.snapshotpath)
+            self.refingerprint()
         else:
-            Command("rsync")(
-                "--del", "-av", self.snapshotpath + "/", self.workingpath
-            ).run()
+            self._rsync(self.snapshotpath, self.workingpath)
+
+    def _rsync(self, from_path, to_path):
+      Command("rsync")(
+          "--del",
+          "-av",
+          # Trailing slash so contents are moved not whole dir
+          from_path + "/",
+          to_path,
+      ).run()
 
     def clean(self):
-        if self.basepath.exists():
-            self.basepath.rmtree()
+        if self.buildpath.exists():
+            self.buildpath.rmtree()
