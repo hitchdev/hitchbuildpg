@@ -9,7 +9,7 @@ A small, self contained python library for building postgres database locally th
 * Takes a snapshot of the newly built database files by taking a copy of the folder.
 
 On subsequent builds, it will skip the long, expensive steps of downloading, compiling postgres
-and restoring a database from a .sql file and just rsync the files across.
+and restoring a database from a .sql file and just overwrite the data files.
 
 
 ```python
