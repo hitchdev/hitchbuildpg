@@ -42,7 +42,7 @@ class PostgresApp(hitchbuild.HitchBuild):
             print(
                 "Running ./configure --with-openssl --prefix={}".format(self.buildpath)
             )
-            Command("./configure")("--prefix={}".format(self.buildpath)).in_dir(
+            Command("./configure")("--with-openssl", "--prefix={}".format(self.buildpath)).in_dir(
                 self.buildpath
             ).run()
             print("Running make world")
